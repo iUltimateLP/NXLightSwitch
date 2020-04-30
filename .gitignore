@@ -4,3 +4,4 @@ build/
 *.nso
 *.nsp
 *.nro
+.vscode/
