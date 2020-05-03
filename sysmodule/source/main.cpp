@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <iostream>
+#include <fstream>
 
 // Include the main libnx system header, for Switch development
 #include <switch.h>
@@ -15,7 +17,7 @@
 u32 __nx_applet_type = AppletType_None;
 
 // Adjust heap size as needed
-#define INNER_HEAP_SIZE 0x80000
+#define INNER_HEAP_SIZE 0x1e000 // 0x1e * 0x1000 // 0x80000
 size_t nx_inner_heap_size = INNER_HEAP_SIZE;
 char   nx_inner_heap[INNER_HEAP_SIZE];
 
@@ -91,6 +93,79 @@ int main(int argc, char* argv[])
 
     // Your code / main loop goes here.
     // If you need threads, you can use threadCreate etc.
+
+    std::ofstream ofs = std::ofstream();
+    ofs.open("sdmc:/NXLightSwitch.txt");
+    ofs << "Starting\n";
+
+    static Thread updateThread;
+    constexpr std::size_t updateThreadStackSize = 2 * 0x1000; // ams::os::MemoryPageSize is 0x1000
+    static std::uint8_t updateThreadStack[updateThreadStackSize];
+    static auto updateThreadFunc = +[](void* args) {
+        int counter = 0;
+        while (counter < 10)
+        {
+            svcSleepThread(1e+10); // 10 seconds
+
+            std::ofstream* ofs = static_cast<std::ofstream*>(args);
+            *ofs << "10 seconds passed. Counter: ";
+            *ofs << counter;
+            *ofs << ".\n";
+
+            counter++;
+        }
+    };
+
+    // LibnxError_BadInput
+    Result r = threadCreate(&updateThread, updateThreadFunc, static_cast<void*>(&ofs), updateThreadStack, updateThreadStackSize, 0x3f, -2);
+    if (!R_SUCCEEDED(r))
+    {
+        ofs << "Error creating thread: ";
+        ofs << std::hex << "0x" << R_VALUE(r) << ": " << std::dec << R_DESCRIPTION(r) << std::endl;
+    }
+    else
+    {
+        ofs << "Created thread\n";
+    }
+
+    // KernelError_InvalidHandle
+    r = threadStart(&updateThread);
+    if (!R_SUCCEEDED(r))
+    {
+        ofs << "Error starting thread: ";
+        ofs << std::hex << "0x" << R_VALUE(r) << ": " << std::dec << R_DESCRIPTION(r) << std::endl;
+    }
+    else
+    {
+        ofs << "Started thread\n";
+    }
+
+    // KernelError_InvalidHandle
+    r = threadWaitForExit(&updateThread);
+    if (!R_SUCCEEDED(r))
+    {
+        ofs << "Error waiting for thread: ";
+        ofs << std::hex << "0x" << R_VALUE(r) << ": " << std::dec << R_DESCRIPTION(r) << std::endl;
+    }
+    else
+    {
+        ofs << "Waiting for thread\n";
+    }
+
+    // LibnxError_BadInput / KernelError_InvalidMemoryRange
+    r = threadClose(&updateThread);
+    if (!R_SUCCEEDED(r))
+    {
+        ofs << "Error closing thread: ";
+        ofs << std::hex << "0x" << R_VALUE(r) << ": " << std::dec << R_DESCRIPTION(r) << std::endl;
+    }
+    else
+    {
+        ofs << "Closed thread\n";
+    }
+
+    ofs << "Ending.\n";
+    ofs.close();
 
     // Deinitialization and resources clean up code can go here.
     return 0;
