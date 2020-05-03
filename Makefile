@@ -15,7 +15,8 @@ all: sysmodule
 
 #	Build the sysmodule
 sysmodule:
-	@:
+	@$(MAKE) -C $@
+	@$(MAKE) stage
 
 #	Stage the release into one single folder which can be copied on the SD card
 stage:
