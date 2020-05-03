@@ -15,6 +15,7 @@
 
 // Include the NXLightSwitch headers
 #include "logger.hpp"
+#include "utils.hpp"
 
 using namespace nxlightswitch;
 
@@ -72,7 +73,7 @@ extern "C" void __attribute__((weak)) __appInit(void)
     if (R_FAILED(rc))
         fatalThrow(MAKERESULT(Module_Libnx, LibnxError_InitFail_HID));*/
 
-    //Enable this if you want to use time
+    // Enable this if you want to use time
     /*rc = timeInitialize();
     if (R_FAILED(rc))
         fatalThrow(MAKERESULT(Module_Libnx, LibnxError_InitFail_Time));
@@ -107,16 +108,19 @@ extern "C" void __attribute__((weak)) __appExit(void)
 // Main program entrypoint
 int main(int argc, char* argv[])
 {
-    // Initialization code can go here.
-
-    // Your code / main loop goes here.
-    // If you need threads, you can use threadCreate etc.
-
     Logger::get()->log("Starting NXLightSwitch");
 
+    // To check the time and update the system's theme, we need to run in a thread so we won't block the system
+    // The threads are libnx' system
     static Thread updateThread;
+
+    // Size of the memory stack for the thread. Partially taken off libstratosphere, it's important to align
+    // the stack by 4KB (THREAD_STACK_ALIGNMENT) otherwise we will get a "Bad Input" error when creating the
+    // thread.
     constexpr std::size_t updateThreadStackSize = 2 * MEMORY_PAGE_SIZE;
-    alignas(THREAD_STACK_ALIGNMENT) static std::uint8_t updateThreadStack[updateThreadStackSize]; // ams::os::ThreadStackAlignment
+    alignas(THREAD_STACK_ALIGNMENT) static std::uint8_t updateThreadStack[updateThreadStackSize];
+
+    // This is the function which runs in our thread
     static auto updateThreadFunc = +[](void* args) {
         int counter = 0;
         while (counter < 10)
@@ -129,46 +133,23 @@ int main(int argc, char* argv[])
         }
     };
 
+    // Create the thread using the thread handle, stack and function above
+    // 0x3f is a special thread priority for background tasks
+    // -2 indicates to run the thread on the default CPU core
     Result r = threadCreate(&updateThread, updateThreadFunc, NULL, updateThreadStack, updateThreadStackSize, 0x3f, -2);
-    if (!R_SUCCEEDED(r))
-    {
-        Logger::get()->logError(r);
-    }
-    else
-    {
-        Logger::get()->log("Created thread");
-    }
+    LOG_IF_ERROR(r);
 
+    // Start the thread after we created it
     r = threadStart(&updateThread);
-    if (!R_SUCCEEDED(r))
-    {
-        Logger::get()->logError(r);
-    }
-    else
-    {
-        Logger::get()->log("Started thread");
-    }
+    LOG_IF_ERROR(r);
 
+    // Now, this will completely block the execution of this sysmodule until the thread exits
     r = threadWaitForExit(&updateThread);
-    if (!R_SUCCEEDED(r))
-    {
-        Logger::get()->logError(r);
-    }
-    else
-    {
-        Logger::get()->log("Waiting for thread");
-    }
+    LOG_IF_ERROR(r);
 
+    // Close the thread because this part of the code is only reached when the thread exited already
     r = threadClose(&updateThread);
-    if (!R_SUCCEEDED(r))
-    {
-        Logger::get()->logError(r);
-    }
-    else
-    {
-        Logger::get()->log("Closed thread");
-    }
+    LOG_IF_ERROR(r);
 
-    // Deinitialization and resources clean up code can go here.
     return 0;
 }
