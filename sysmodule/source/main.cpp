@@ -16,10 +16,11 @@
 // Include the NXLightSwitch headers
 #include "logger.hpp"
 #include "utils.hpp"
+#include "worker.hpp"
 
 using namespace nxlightswitch;
 
-// Taken from Stratosphere
+// Taken from libstratosphere for memory management
 #define MEMORY_PAGE_SIZE 0x1000
 #define THREAD_STACK_ALIGNMENT 4 * 1024 // 4kb
 
@@ -110,45 +111,52 @@ int main(int argc, char* argv[])
 {
     Logger::get()->log("Starting NXLightSwitch");
 
+    // Create a new instance of our Worker which will handle the logic for this module
+    Worker* worker = new Worker();
+
     // To check the time and update the system's theme, we need to run in a thread so we won't block the system
     // The threads are libnx' system
-    static Thread updateThread;
+    static Thread workerThread;
 
     // Size of the memory stack for the thread. Partially taken off libstratosphere, it's important to align
     // the stack by 4KB (THREAD_STACK_ALIGNMENT) otherwise we will get a "Bad Input" error when creating the
     // thread.
-    constexpr std::size_t updateThreadStackSize = 2 * MEMORY_PAGE_SIZE;
-    alignas(THREAD_STACK_ALIGNMENT) static std::uint8_t updateThreadStack[updateThreadStackSize];
+    constexpr std::size_t workerThreadStackSize = 2 * MEMORY_PAGE_SIZE;
+    alignas(THREAD_STACK_ALIGNMENT) static std::uint8_t workerThreadStack[workerThreadStackSize];
 
     // This is the function which runs in our thread
-    static auto updateThreadFunc = +[](void* args) {
-        int counter = 0;
-        while (counter < 10)
+    static auto workerThreadFunc = +[](void* args) {
+        // Get back the worker instance from the args we pass to this thread
+        Worker* worker = static_cast<Worker*>(args);
+
+        // This loop shouldn't end as we're always updating the worker
+        while (true)
         {
-            svcSleepThread(5e+9); // 5 seconds
+            // Block the thread until we should perform our next check
+            svcSleepThread(WORKER_UPDATE_INTERVAL);
 
-            Logger::get()->log("5 seconds passed in thread. Counter: %d", counter);
-
-            counter++;
+            // Call the worker to perform the logic
+            worker->DoWork();
         }
     };
 
     // Create the thread using the thread handle, stack and function above
+    // We cast our worker instance to a void* so we can pass it to the thread
     // 0x3f is a special thread priority for background tasks
     // -2 indicates to run the thread on the default CPU core
-    Result r = threadCreate(&updateThread, updateThreadFunc, NULL, updateThreadStack, updateThreadStackSize, 0x3f, -2);
+    Result r = threadCreate(&workerThread, workerThreadFunc, static_cast<void*>(worker), workerThreadStack, workerThreadStackSize, 0x3f, -2);
     LOG_IF_ERROR(r);
 
     // Start the thread after we created it
-    r = threadStart(&updateThread);
+    r = threadStart(&workerThread);
     LOG_IF_ERROR(r);
 
     // Now, this will completely block the execution of this sysmodule until the thread exits
-    r = threadWaitForExit(&updateThread);
+    r = threadWaitForExit(&workerThread);
     LOG_IF_ERROR(r);
 
     // Close the thread because this part of the code is only reached when the thread exited already
-    r = threadClose(&updateThread);
+    r = threadClose(&workerThread);
     LOG_IF_ERROR(r);
 
     return 0;
