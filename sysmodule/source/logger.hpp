@@ -8,6 +8,9 @@
 #include <cstdarg>
 #include <ctime>
 
+// Path of the log file
+#define LOG_FILE_PATH "sdmc:/NXLightSwitch.txt"
+
 namespace nxlightswitch
 {
     // This class implements a logging system to easily log to a file,
@@ -17,6 +20,9 @@ namespace nxlightswitch
     public:
         // Returns the singleton instance of this logger
         static Logger* get();
+
+        // Clears the log file
+        void clearLogFile();
 
         // Logs with variadic arguments
         void log(char* format, ...);

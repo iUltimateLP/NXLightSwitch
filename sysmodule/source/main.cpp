@@ -109,6 +109,7 @@ extern "C" void __attribute__((weak)) __appExit(void)
 // Main program entrypoint
 int main(int argc, char* argv[])
 {
+    Logger::get()->clearLogFile();
     Logger::get()->log("Starting NXLightSwitch");
 
     // Create a new instance of our Worker which will handle the logic for this module

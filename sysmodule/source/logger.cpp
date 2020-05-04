@@ -22,6 +22,14 @@ Logger* Logger::get()
     return singleton;
 }
 
+void Logger::clearLogFile()
+{
+    // Open the file for write is all it needs to clear it
+    FILE* logFile = fopen(LOG_FILE_PATH, "w");
+    fflush(logFile);
+    fclose(logFile);
+}
+
 void Logger::log(char* format, ...)
 {
     // Format the log text buffer using variadic arguments
@@ -42,7 +50,7 @@ void Logger::log(char* format, ...)
     strftime(timeBuffer, sizeof(timeBuffer), "%d-%m-%Y %H:%M:%S", timeInfo);
 
     // Open the log file
-    FILE* logFile = fopen("sdmc:/NXLightSwitch.txt", "a"); // a means append
+    FILE* logFile = fopen(LOG_FILE_PATH, "a"); // a means append
 
     // Print the log line to the file
     fprintf(logFile, "%s: %s\n", timeBuffer, logBuffer);
