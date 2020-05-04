@@ -6,6 +6,8 @@
 #include "worker.hpp"
 #include "logger.hpp"
 #include "ini/inireader.hpp"
+#include <iomanip>
+#include <sstream>
 #include <switch.h>
 using namespace nxlightswitch;
 
@@ -41,9 +43,17 @@ bool Worker::ReadConfig()
     std::string darkTimeStr = iniReader.GetString("NXLightSwitch", "DarkTime", "0");
     useAutomaticTimes = iniReader.GetBoolean("NXLightSwitch", "Automatic", false);
 
-    // Convert the string timestamps into time_t timestamps
-    lightTime = (std::time_t)strtol(lightTimeStr.c_str(), NULL, 10);
-    darkTime = (std::time_t)strtol(darkTimeStr.c_str(), NULL, 10);
+    // Convert the string times into time_t times
+    // Note: the times need to be in the following format: HH:MM (see http://www.cplusplus.com/reference/ctime/strftime/)
+    lightTime = {0};
+    std::istringstream ssLight(lightTimeStr);
+    ssLight >> std::get_time(&lightTime, "%R");
+
+    darkTime = {0};
+    std::istringstream ssDark(darkTimeStr);
+    ssDark >> std::get_time(&darkTime, "%R");
+
+    Logger::get()->log("Light: %d:%d - Dark: %d:%d - Auto: %d", lightTime.tm_hour, lightTime.tm_min, darkTime.tm_hour, darkTime.tm_min, useAutomaticTimes);
 
     return true;
 }

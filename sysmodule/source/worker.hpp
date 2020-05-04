@@ -8,7 +8,7 @@
 #include <ctime>
 
 // This is the update interval for the worker thread (in nanosecond)
-#define WORKER_UPDATE_INTERVAL 5e+9
+#define WORKER_UPDATE_INTERVAL 1e+10
 
 namespace nxlightswitch
 {
@@ -26,8 +26,8 @@ namespace nxlightswitch
 
     private:
         // Data read from the config
-        std::time_t lightTime;
-        std::time_t darkTime;
+        struct std::tm lightTime;
+        struct std::tm darkTime;
         bool useAutomaticTimes;
     };
 }
