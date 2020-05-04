@@ -41,7 +41,6 @@ bool Worker::ReadConfig()
     // Read the values off the config
     std::string lightTimeStr = iniReader.GetString("NXLightSwitch", "LightTime", "0");
     std::string darkTimeStr = iniReader.GetString("NXLightSwitch", "DarkTime", "0");
-    useAutomaticTimes = iniReader.GetBoolean("NXLightSwitch", "Automatic", false);
 
     // Convert the string times into time_t times
     // Note: the times need to be in the following format: HH:MM (see http://www.cplusplus.com/reference/ctime/strftime/)
@@ -53,7 +52,7 @@ bool Worker::ReadConfig()
     std::istringstream ssDark(darkTimeStr);
     ssDark >> std::get_time(&darkTime, "%R");
 
-    Logger::get()->log("Light: %d:%d - Dark: %d:%d - Auto: %d", lightTime.tm_hour, lightTime.tm_min, darkTime.tm_hour, darkTime.tm_min, useAutomaticTimes);
+    Logger::get()->log("Light: %d:%d - Dark: %d:%d", lightTime.tm_hour, lightTime.tm_min, darkTime.tm_hour, darkTime.tm_min);
 
     return true;
 }

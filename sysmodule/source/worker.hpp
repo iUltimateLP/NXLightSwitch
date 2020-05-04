@@ -28,6 +28,5 @@ namespace nxlightswitch
         // Data read from the config
         struct std::tm lightTime;
         struct std::tm darkTime;
-        bool useAutomaticTimes;
     };
 }

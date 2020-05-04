@@ -12,6 +12,7 @@
 
 // Include the main libnx system header, for Switch development
 #include <switch.h>
+#include <time.h>
 
 // Include the NXLightSwitch headers
 #include "logger.hpp"
@@ -74,12 +75,13 @@ extern "C" void __attribute__((weak)) __appInit(void)
     if (R_FAILED(rc))
         fatalThrow(MAKERESULT(Module_Libnx, LibnxError_InitFail_HID));*/
 
-    // Enable this if you want to use time
-    /*rc = timeInitialize();
+    // Initialize the time module
+    rc = timeInitialize();
     if (R_FAILED(rc))
+    {
         fatalThrow(MAKERESULT(Module_Libnx, LibnxError_InitFail_Time));
-
-    __libnx_init_time();*/
+    }
+    //__libnx_init_time();
 
     // Initialize the filesystem service and make sure it was successful
     rc = fsInitialize();
@@ -101,7 +103,7 @@ extern "C" void __attribute__((weak)) __appExit(void)
     // Cleanup and exit the services we opened
     fsdevUnmountAll();
     fsExit();
-    //timeExit();
+    timeExit();
     //hidExit();
     smExit();
 }

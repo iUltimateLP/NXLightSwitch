@@ -10,7 +10,6 @@
 
 # What is it?
  + Changes the Switch's color theme based on the time of day
- + Automatically use sunrise/sunset times for your region
  + Manually set the light and dark theme times
  + Needs Homebrew (CFW) installed on your Switch
 
