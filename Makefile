@@ -23,6 +23,8 @@ stage:
 	@mkdir -p out/atmosphere/contents/$(TITLE_ID)/flags
 	@touch out/atmosphere/contents/$(TITLE_ID)/flags/boot2.flag
 	@cp sysmodule/out/sysmodule.nsp out/atmosphere/contents/$(TITLE_ID)/exefs.nsp
+	@mkdir -p out/config/NXLightSwitch
+	@cp sysmodule/NXLightSwitch.ini out/config/NXLightSwitch/NXLightSwitch.ini
 
 #	Cleans everything
 clean:
