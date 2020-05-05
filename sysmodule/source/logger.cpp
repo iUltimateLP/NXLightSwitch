@@ -39,11 +39,32 @@ void Logger::log(char* format, ...)
     vsprintf(logBuffer, format, vaList);
     va_end(vaList);
 
-    // Get the current time
+    // Get the current time (UNIX time, will always start at the UNIX Epoch 01/01/1970)
     time_t currentTime;
-    struct tm* timeInfo;
+    struct std::tm* timeInfo;
     time(&currentTime);
     timeInfo = localtime(&currentTime);
+
+    // Because of the not accurate result of the UNIX time(), try to get the console's time using libnx
+    u64 currentConsoleTime;
+    Result getTimeResult = timeGetCurrentTime(TimeType::TimeType_UserSystemClock, &currentConsoleTime);
+
+    // If that worked...
+    if (R_SUCCEEDED(getTimeResult))
+    {
+        // ...make a TimeCalendarTime (also from libnx) out of the timestamp
+        TimeCalendarTime consoleCalendarTime;
+        TimeCalendarAdditionalInfo consoleCalendarInfo;
+        timeToCalendarTimeWithMyRule(currentConsoleTime, &consoleCalendarTime, &consoleCalendarInfo);
+
+        // Update the values of our former timeInfo with the values we got from the Switch
+        timeInfo->tm_mday = (int)consoleCalendarTime.day;
+        timeInfo->tm_mon = (int)consoleCalendarTime.month - 1; // tm_mon is 0-based
+        timeInfo->tm_year = (int)consoleCalendarTime.year - 1900; // tm_year is 0-based
+        timeInfo->tm_hour = (int)consoleCalendarTime.hour;
+        timeInfo->tm_min = (int)consoleCalendarTime.minute;
+        timeInfo->tm_sec = (int)consoleCalendarTime.second;
+    }
 
     // Format the time into a string
     char timeBuffer[80];

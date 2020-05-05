@@ -29,7 +29,7 @@ void Worker::DoWork()
 bool Worker::ReadConfig()
 {
     // Create a new INIReader to read the config file
-    INIReader iniReader("sdmc:/NXLightSwitch.ini");
+    INIReader iniReader("sdmc:/config/NXLightSwitch/NXLightSwitch.ini");
 
     // Make sure we were able to read the ini file
     if (iniReader.ParseError() < 0)
