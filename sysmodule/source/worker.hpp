@@ -7,7 +7,7 @@
 #include <cstdlib>
 #include <ctime>
 
-// This is the update interval for the worker thread (in nanosecond)
+// This is the update interval for the worker thread (in nanoseconds)
 #define WORKER_UPDATE_INTERVAL 1e+10
 
 namespace nxlightswitch
@@ -23,6 +23,10 @@ namespace nxlightswitch
     private:
         // Reads the configuration file of NXLightSwitch and stores the values
         bool ReadConfig();
+
+        // Checks the console's current time and compares it with the stored light/dark time.
+        // Also changes the theme accordingly
+        void CheckForThemeChange();
 
     private:
         // Data read from the config

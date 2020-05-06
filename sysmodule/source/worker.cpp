@@ -17,13 +17,9 @@ void Worker::DoWork()
     if (!ReadConfig())
         return;
 
-    // 2. If the config enabled automatic day/night theming, and it's a new day, check 
-    //    the public API to grab the latest sunrise/sunset times
-
-    // 3. Compare the times from the config with the current time to see if we should
+    // 2. Compare the times from the config with the current time to see if we should
     //    update the systems theme
-
-    // 4. Update the systems theme
+    CheckForThemeChange();
 }
 
 bool Worker::ReadConfig()
@@ -52,7 +48,81 @@ bool Worker::ReadConfig()
     std::istringstream ssDark(darkTimeStr);
     ssDark >> std::get_time(&darkTime, "%R");
 
-    Logger::get()->log("Light: %d:%d - Dark: %d:%d", lightTime.tm_hour, lightTime.tm_min, darkTime.tm_hour, darkTime.tm_min);
+    //Logger::get()->log("Light: %d:%d - Dark: %d:%d", lightTime.tm_hour, lightTime.tm_min, darkTime.tm_hour, darkTime.tm_min);
 
     return true;
+}
+
+void Worker::CheckForThemeChange()
+{
+    // Get the current time of the Nintendo Switch console using libnx
+    u64 currentConsoleTime;
+    Result getTimeResult = timeGetCurrentTime(TimeType::TimeType_UserSystemClock, &currentConsoleTime);
+
+    // Make sure we were able to get the time
+    if (R_FAILED(getTimeResult))
+    {
+        Logger::get()->logError(getTimeResult);
+        return;
+    }
+
+    // Make a TimeCalendarTime out of the timestamp using libnx' features
+    TimeCalendarTime consoleCalendarTime;
+    TimeCalendarAdditionalInfo consoleCalendarInfo;
+    timeToCalendarTimeWithMyRule(currentConsoleTime, &consoleCalendarTime, &consoleCalendarInfo);
+
+    // Now perform some logic checks to see if we should change the theme
+    bool needsLightThemeChange = consoleCalendarTime.hour >= lightTime.tm_hour 
+        && consoleCalendarTime.minute >= lightTime.tm_min
+        && ((consoleCalendarTime.hour > darkTime.tm_hour && (consoleCalendarTime.minute > darkTime.tm_min || consoleCalendarTime.minute == 0)) 
+            || (consoleCalendarTime.hour == darkTime.tm_hour && consoleCalendarTime.minute > darkTime.tm_min));
+
+    bool needsDarkThemeChange = consoleCalendarTime.hour >= darkTime.tm_hour
+        && consoleCalendarTime.minute >= darkTime.tm_min
+        && ((consoleCalendarTime.hour < lightTime.tm_hour && (consoleCalendarTime.minute < lightTime.tm_min || consoleCalendarTime.minute == 0)) 
+            || (consoleCalendarTime.hour == lightTime.tm_hour && consoleCalendarTime.minute < lightTime.tm_min));
+
+    bool needsThemeChange = needsLightThemeChange || needsDarkThemeChange;
+
+    ColorSetId currentTheme;
+    Result sysGetColorSetIdResult = setsysGetColorSetId(&currentTheme);
+    if (R_SUCCEEDED(sysGetColorSetIdResult))
+    {
+        Logger::get()->log("Got color theme");
+    }
+    else
+    {
+        Logger::get()->logError(sysGetColorSetIdResult);
+    }
+
+    Logger::get()->log("CheckForThemeChange() CurrentTime = %d:%d CurrentTheme = %s NeedsLightThemeChange = %d (%d:%d) NeedsDarkThemeChange = %d (%d:%d)",
+        consoleCalendarTime.hour,
+        consoleCalendarTime.minute,
+        currentTheme == ColorSetId::ColorSetId_Light ? "Light" : "Dark",
+        needsLightThemeChange,
+        lightTime.tm_hour,
+        lightTime.tm_min,
+        needsDarkThemeChange,
+        darkTime.tm_hour,
+        darkTime.tm_min);
+
+    // Do we need to change the theme?
+    if (needsThemeChange)
+    {
+        // What will the new theme be?
+        ColorSetId newTheme = needsLightThemeChange ? ColorSetId::ColorSetId_Light : ColorSetId::ColorSetId_Dark;
+
+        // Apply the new theme using libnx
+        Result sysSetColorSetIdResult = setsysSetColorSetId(newTheme);
+
+        // Check if it worked
+        if (R_SUCCEEDED(sysSetColorSetIdResult))
+        {
+            Logger::get()->log("Changed theme to %s", newTheme == ColorSetId::ColorSetId_Light ? "Light" : "Dark");
+        }
+        else
+        {
+            Logger::get()->logError(sysSetColorSetIdResult);
+        }
+    }
 }

@@ -26,5 +26,3 @@ I've used the following libraries, without this project wouldn't have been possi
  + [libnx](https://github.com/switchbrew/libnx)
  + [Atmosphère](https://github.com/Atmosphere-NX/Atmosphere)
  + [@benhoyt/inih](https://github.com/benhoyt/inih)
- + [@elnormous/HTTPRequest](https://github.com/elnormous/HTTPRequest)
-

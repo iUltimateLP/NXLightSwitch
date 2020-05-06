@@ -57,6 +57,9 @@ extern "C" void __libnx_initheap(void)
 	fake_heap_end   = (char*)addr + size;
 }
 
+// Forward declaration for __libnx_init_time
+extern "C" void __libnx_init_time(void);
+
 // Initializes the sysmodule, used to init services
 extern "C" void __attribute__((weak)) __appInit(void)
 {
@@ -70,18 +73,27 @@ extern "C" void __attribute__((weak)) __appInit(void)
         fatalThrow(MAKERESULT(Module_Libnx, LibnxError_InitFail_SM));
     }
 
-    // Enable this if you want to use HID
-    /*rc = hidInitialize();
-    if (R_FAILED(rc))
-        fatalThrow(MAKERESULT(Module_Libnx, LibnxError_InitFail_HID));*/
-
     // Initialize the time module
     rc = timeInitialize();
     if (R_FAILED(rc))
     {
         fatalThrow(MAKERESULT(Module_Libnx, LibnxError_InitFail_Time));
     }
-    //__libnx_init_time();
+    __libnx_init_time();
+
+    // Initialize the set module
+    rc = setInitialize();
+    if (R_FAILED(rc))
+    {
+        fatalThrow(MAKERESULT(Module_Libnx, LibnxError_NotInitialized));
+    }
+
+    // Initialize the setsys module
+    rc = setsysInitialize();
+    if (R_FAILED(rc))
+    {
+        fatalThrow(MAKERESULT(Module_Libnx, LibnxError_NotInitialized));
+    }
 
     // Initialize the filesystem service and make sure it was successful
     rc = fsInitialize();
@@ -103,8 +115,9 @@ extern "C" void __attribute__((weak)) __appExit(void)
     // Cleanup and exit the services we opened
     fsdevUnmountAll();
     fsExit();
+    setsysExit();
+    setExit();
     timeExit();
-    //hidExit();
     smExit();
 }
 
